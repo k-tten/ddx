@@ -1,0 +1,30 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+#canvas {
+    position: absolute;
+    border: 1px solid #555;
+    border-radius: 4px;
+    z-index: 1;
+}
+
+#bg {
+    position: absolute;
+    background-color: #fff;
+    border-radius: 4px;
+    z-index: 0;
+    pointer-events: all;
+}
