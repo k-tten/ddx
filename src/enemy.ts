@@ -1,34 +1,26 @@
-import * as math from "mathjs";
-import {
-    CURVE_TOLERANCE,
-    HEIGHT,
-    INITIAL_STEP,
-    MAX_DEPTH,
-    MAX_JUMP,
-    MIN_STEP,
-    RESOLUTION,
-    WIDTH,
-} from "./constants";
+import type { ConstantNode, MathNode, ParenthesisNode } from "mathjs/number";
+import { OperatorNode, derivative, parse, simplify } from "mathjs/number";
+import { CURVE_TOLERANCE, HEIGHT, INITIAL_STEP, MAX_DEPTH, MAX_JUMP, MIN_STEP, RESOLUTION, WIDTH } from "./constants";
 import { texsvg } from "./setup";
 import { sounds } from "./sounds";
 
 type Point = { x: number; y: number };
 
-function isOperatorNode(node: math.MathNode): node is math.OperatorNode {
+function isOperatorNode(node: MathNode): node is OperatorNode {
     return node.type === "OperatorNode";
 }
 
-function unwrapParentheses(node: math.MathNode): math.MathNode {
-    while (node.type === "ParenthesisNode") {
-        node = (node as math.ParenthesisNode).content;
-    }
+function unwrapParentheses(node: MathNode): MathNode {
+    while (node.type === "ParenthesisNode")
+        node = (node as ParenthesisNode).content;
+
     return node;
 }
 
-function splitTerms(node: math.MathNode): string[] {
+function splitTerms(node: MathNode): string[] {
     const terms: string[] = [];
 
-    const visit = (current: math.MathNode, sign: 1 | -1) => {
+    const visit = (current: MathNode, sign: 1 | -1) => {
         if (isOperatorNode(current)) {
             if (current.op === "+" && current.args.length === 2) {
                 visit(current.args[0], sign);
@@ -56,10 +48,10 @@ function splitTerms(node: math.MathNode): string[] {
     return terms;
 }
 
-function scalarValue(node: math.MathNode): number | undefined {
+function scalarValue(node: MathNode): number | undefined {
     const unwrapped = unwrapParentheses(node);
     if (unwrapped.type === "ConstantNode") {
-        const value = (unwrapped as math.ConstantNode).value;
+        const value = (unwrapped as ConstantNode).value;
         return typeof value === "number" ? value : undefined;
     }
 
@@ -72,53 +64,56 @@ function scalarValue(node: math.MathNode): number | undefined {
 }
 
 function scalarProduct(
-    node: math.MathNode,
-): { coefficient: number; functionNode: math.MathNode } | undefined {
+    node: MathNode,
+): { coefficient: number; functionNode: MathNode } | undefined {
     const unwrapped = unwrapParentheses(node);
 
     if (isOperatorNode(unwrapped) && unwrapped.op === "-" && unwrapped.args.length === 1) {
         const product = scalarProduct(unwrapped.args[0]);
+
         return product
             ? { coefficient: -product.coefficient, functionNode: product.functionNode }
             : undefined;
     }
 
-    if (!isOperatorNode(unwrapped) || unwrapped.op !== "*" || unwrapped.args.length !== 2) {
+    if (!isOperatorNode(unwrapped) || unwrapped.op !== "*" || unwrapped.args.length !== 2)
         return undefined;
-    }
 
     const leftScalar = scalarValue(unwrapped.args[0]);
     const rightScalar = scalarValue(unwrapped.args[1]);
-    if (leftScalar !== undefined) {
+
+    if (leftScalar !== undefined)
         return { coefficient: leftScalar, functionNode: unwrapped.args[1] };
-    }
-    if (rightScalar !== undefined) {
+
+    if (rightScalar !== undefined)
         return { coefficient: rightScalar, functionNode: unwrapped.args[0] };
-    }
 
     return undefined;
 }
 
-function derivativeChildren(node: math.MathNode): string[] | undefined {
+function derivativeChildren(node: MathNode): string[] | undefined {
     const product = scalarProduct(node);
+
     if (!product || !Number.isInteger(product.coefficient)) return undefined;
 
     const count = Math.abs(product.coefficient);
+
     if (count === 0) return [];
 
     const expression = product.functionNode.toString();
     const childExpression = product.coefficient < 0 ? `-(${expression})` : expression;
+
     return Array.from({ length: count }, () => childExpression);
 }
 
-function simplifyForDisplay(node: math.MathNode): math.MathNode {
-    const simplified = math.simplify(node);
+function simplifyForDisplay(node: MathNode): MathNode {
+    const simplified = simplify(node);
 
     return simplified.transform((current) => {
         if (!isOperatorNode(current) || current.op !== "/") return current;
 
-        let numerator: math.MathNode = current;
-        const denominatorFactors: math.MathNode[] = [];
+        let numerator: MathNode = current;
+        const denominatorFactors: MathNode[] = [];
 
         while (isOperatorNode(numerator) && numerator.op === "/") {
             denominatorFactors.unshift(numerator.args[1]);
@@ -128,10 +123,10 @@ function simplifyForDisplay(node: math.MathNode): math.MathNode {
         if (denominatorFactors.length < 2) return current;
 
         const denominator = denominatorFactors.reduce((product, factor) => (
-            new math.OperatorNode("*", "multiply", [product, factor])
+            new OperatorNode("*", "multiply", [product, factor])
         ));
 
-        return new math.OperatorNode("/", "divide", [numerator, denominator]);
+        return new OperatorNode("/", "divide", [numerator, denominator]);
     });
 }
 
@@ -172,16 +167,13 @@ export class Enemy {
     readonly vel = { x: 0, y: 0 };
     radius: number;
     readonly colour: string;
-    readonly #baseOffDuration = Enemy.OFF_DURATION_MIN
-        + Math.random() * (Enemy.OFF_DURATION_MAX - Enemy.OFF_DURATION_MIN);
+    readonly #baseOffDuration = Enemy.OFF_DURATION_MIN + Math.random() * (Enemy.OFF_DURATION_MAX - Enemy.OFF_DURATION_MIN);
     #cycleOffDuration = this.#baseOffDuration;
-    readonly laserDuration = Enemy.LASER_DURATION_MIN
-        + Math.random() * (Enemy.LASER_DURATION_MAX - Enemy.LASER_DURATION_MIN);
-    readonly preferredDistance = Enemy.PREFERRED_DISTANCE
-        + (Math.random() * 2 - 1) * Enemy.ORBIT_DISTANCE_VARIATION;
+    readonly laserDuration = Enemy.LASER_DURATION_MIN + Math.random() * (Enemy.LASER_DURATION_MAX - Enemy.LASER_DURATION_MIN);
+    readonly preferredDistance = Enemy.PREFERRED_DISTANCE + (Math.random() * 2 - 1) * Enemy.ORBIT_DISTANCE_VARIATION;
     rotation = Math.random() * Math.PI * 2;
 
-    readonly #fn: math.MathNode;
+    readonly #fn: MathNode;
     readonly #isConstantFunction: boolean;
     readonly #expressionImage: HTMLImageElement;
     readonly #rotationDirection = Math.random() < 0.5 ? -1 : 1;
@@ -213,8 +205,8 @@ export class Enemy {
         this.pos = this.position;
         this.colour = colour;
         this.#cycleTime = Math.random() * this.offDuration;
-        this.#fn = math.parse(expression);
-        this.#isConstantFunction = math.simplify(math.derivative(this.#fn, "x")).toString() === "0";
+        this.#fn = parse(expression);
+        this.#isConstantFunction = simplify(derivative(this.#fn, "x")).toString() === "0";
         this.#expressionImage = new Image();
         const displayExpression = simplifyForDisplay(this.#fn)
             .toTex()
@@ -259,8 +251,8 @@ export class Enemy {
     }
 
     #split(): Enemy[] {
-        const derivative = math.simplify(math.derivative(this.#fn, "x"));
-        if (derivative.toString() === "0") return [];
+        const deriv = simplify(derivative(this.#fn, "x"));
+        if (deriv.toString() === "0") return [];
 
         const node = unwrapParentheses(this.#fn);
         let expressions = splitTerms(node);
@@ -273,9 +265,9 @@ export class Enemy {
                 const count = Math.abs(product.coefficient);
                 const isGroupedFunction = product.functionNode.type === "ParenthesisNode";
                 const groupedFunction = isGroupedFunction
-                    ? (product.functionNode as math.ParenthesisNode).content.toString()
+                    ? (product.functionNode as ParenthesisNode).content.toString()
                     : undefined;
-                let childExpression = derivative.toString();
+                let childExpression = deriv.toString();
                 if (groupedFunction !== undefined) {
                     childExpression = product.coefficient < 0
                         ? `-(${groupedFunction})`
@@ -289,8 +281,8 @@ export class Enemy {
             }
 
             if (expressions.length === 0) {
-                expressions = derivativeChildren(derivative)
-                    ?? [derivative.toString()];
+                expressions = derivativeChildren(deriv)
+                    ?? [deriv.toString()];
             }
         }
 
