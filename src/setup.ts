@@ -1,8 +1,8 @@
-import { RegisterHTMLHandler } from "@mathjax/src/cjs/handlers/html.js";
-import { TeX } from "@mathjax/src/cjs/input/tex.js";
-import { mathjax } from "@mathjax/src/cjs/mathjax.js";
-import { SVG } from "@mathjax/src/cjs/output/svg.js";
-import { HTMLAdaptor } from "@mathjax/src/js/adaptors/HTMLAdaptor.js";
+import { RegisterHTMLHandler } from "@mathjax/src/mjs/handlers/html.js";
+import { TeX } from "@mathjax/src/mjs/input/tex.js";
+import { mathjax } from "@mathjax/src/mjs/mathjax.js";
+import { SVG } from "@mathjax/src/mjs/output/svg.js";
+import { HTMLAdaptor } from "@mathjax/src/mjs/adaptors/HTMLAdaptor.js";
 import { HEIGHT, RESOLUTION, WIDTH } from "./constants";
 import { tiltreg } from "./tilt";
 
